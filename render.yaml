@@ -2,7 +2,7 @@
 # 一键部署会创建两个服务：手机端后端 server + MCP 服务。
 # 部署后：
 # - 手机 App 填 zhangxinchuang-server 的外部地址。
-# - AI/MCP 客户端填 zhangxinchuang-mcp 的 /mcp 或 /sse 地址。
+# - AI/MCP 客户端使用带 LINJIAN_MCP_TOKEN 的 /mcp 或 /sse 地址。
 #
 # v0.3.6.6 修正：MCP 的 LINJIAN_URL 不再使用 Render 内网 hostport，
 # 而是自动引用 server 服务的公网 RENDER_EXTERNAL_URL。
@@ -13,6 +13,9 @@ envVarGroups:
   - name: zhangxinchuang-public-shared
     envVars:
       - key: LINJIAN_TOKEN
+        generateValue: true
+      # 单独保护公网 MCP 入口，不与手机/后端 Token 混用。
+      - key: LINJIAN_MCP_TOKEN
         generateValue: true
       - key: LINJIAN_DEFAULT_DEVICE
         value: android-phone

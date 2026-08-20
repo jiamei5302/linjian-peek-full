@@ -1,6 +1,6 @@
 # MCP 工具清单（v0.3.6.6-public）
 
-掌心窗 MCP 服务把手机端能力暴露给支持 MCP 的客户端。所有工具都需要你自己的 `LINJIAN_TOKEN`，并且手机端需要保持服务启动。公开版工具只保留通用能力，不包含私人绑定接口、私人 Token、私人服务地址或固定私人关系。
+掌心窗 MCP 服务把手机端能力暴露给支持 MCP 的客户端。MCP 使用独立的 `LINJIAN_MCP_TOKEN` 保护公网入口，再通过 `LINJIAN_TOKEN` 访问手机后端；手机端还需要保持服务启动。公开版工具只保留通用能力，不包含私人绑定接口、私人 Token、私人服务地址或固定私人关系。
 
 ## 连接方式
 
@@ -9,15 +9,15 @@ MCP 服务默认监听 `PORT` 环境变量，未设置时使用 `8787`。
 常用地址：
 
 ```text
-http://127.0.0.1:8787/mcp
-http://127.0.0.1:8787/sse
+http://127.0.0.1:8787/mcp?token=你的-LINJIAN_MCP_TOKEN
+http://127.0.0.1:8787/sse?token=你的-LINJIAN_MCP_TOKEN
 ```
 
 公网部署后将域名替换为自己的 MCP 服务域名，例如：
 
 ```text
-https://你的-mcp-域名/mcp
-https://你的-mcp-域名/sse
+https://你的-mcp-域名/mcp?token=你的-LINJIAN_MCP_TOKEN
+https://你的-mcp-域名/sse?token=你的-LINJIAN_MCP_TOKEN
 ```
 
 必需环境变量：
@@ -25,8 +25,11 @@ https://你的-mcp-域名/sse
 ```env
 LINJIAN_URL=https://你的-server-域名
 LINJIAN_TOKEN=你的长随机token
+LINJIAN_MCP_TOKEN=另一枚长随机token
 LINJIAN_DEFAULT_DEVICE=android-phone
 ```
+
+优先使用 Streamable HTTP。包含 `LINJIAN_MCP_TOKEN` 的完整连接 URL 等同于密钥，不要公开、截图或提交到仓库。
 
 Render 一键部署时，`LINJIAN_URL` 会由 Blueprint 自动引用 server 的公网 `RENDER_EXTERNAL_URL`；旧版部署只重新部署 MCP 时，新版代码也会把旧内网 `hostport` 自动兜底为公网地址。手动部署或 Railway 部署时再按上面格式填写。
 
