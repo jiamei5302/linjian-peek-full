@@ -46,6 +46,7 @@ Public Networking: HTTP 域名开启
 ```env
 LINJIAN_URL=https://${{ server.RAILWAY_PUBLIC_DOMAIN }}
 LINJIAN_TOKEN=${{ shared.LINJIAN_TOKEN }}
+LINJIAN_MCP_TOKEN=${{ shared.LINJIAN_MCP_TOKEN }}
 LINJIAN_DEFAULT_DEVICE=${{ shared.LINJIAN_DEFAULT_DEVICE }}
 ```
 
@@ -57,10 +58,11 @@ LINJIAN_DEFAULT_DEVICE=${{ shared.LINJIAN_DEFAULT_DEVICE }}
 
 ```env
 LINJIAN_TOKEN=${{ secret(48) }}
+LINJIAN_MCP_TOKEN=${{ secret(48) }}
 LINJIAN_DEFAULT_DEVICE=android-phone
 ```
 
-这样每次用户部署模板时都会生成自己的 Token，server 与 mcp 使用同一个 Token。
+这样每次用户部署模板时都会生成手机/后端 Token 和独立的 MCP 入口 Token。
 
 ## 3. 生成 Railway Template
 
@@ -93,11 +95,13 @@ https://你的-server-域名/health
 https://你的-mcp-域名/health
 ```
 
-server 看到 `ok: true`，mcp 看到 `ok: true`、`has_url: true`、`has_token: true`，就可以在 Android 设置页填写 server 地址、Token 和设备 ID。
+server 看到 `ok: true`，mcp 看到 `ok: true`、`has_url: true`、`has_token: true`、`has_mcp_token: true`，就可以在 Android 设置页填写 server 地址、`LINJIAN_TOKEN` 和设备 ID。
 
 MCP 客户端地址：
 
 ```text
-https://你的-mcp-域名/mcp
-https://你的-mcp-域名/sse
+https://你的-mcp-域名/mcp?token=你的-LINJIAN_MCP_TOKEN
+https://你的-mcp-域名/sse?token=你的-LINJIAN_MCP_TOKEN
 ```
+
+包含 `LINJIAN_MCP_TOKEN` 的连接 URL 等同于密钥，不要公开或截图。

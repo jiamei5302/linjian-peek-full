@@ -20,7 +20,9 @@
 - 固定签名保持不变，可覆盖安装上一版公开版。
 
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/linzhi-524/linjian-peek-public)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/jiamei5302/linjian-peek-full)
+
+> 本仓库为个人部署增加了 MCP 入口鉴权。公网 `/mcp` 与 `/sse` 必须携带独立的 `LINJIAN_MCP_TOKEN`，未授权请求会返回 401。
 
 > Railway 一键部署按钮需要先在 Railway 控制台生成 Template Code。生成后，把 `docs/railway-one-click.md` 里的 `YOUR_TEMPLATE_CODE` 替换掉，再把按钮复制到这里即可。
 
@@ -97,20 +99,23 @@ Blueprint 会创建两个 Web Service：
 Blueprint 会自动生成并共享：
 
 - `LINJIAN_TOKEN`：手机端、后端和 MCP 共同使用的访问令牌。
+- `LINJIAN_MCP_TOKEN`：只用于保护公网 MCP 入口；不要填入 Android App，也不要公开。
 - `LINJIAN_DEFAULT_DEVICE`：默认设备 ID，默认 `android-phone`。
 - `LINJIAN_URL`：MCP 自动引用 `zhangxinchuang-server` 的公网 HTTPS 地址，不需要手动填写。
 
 部署完成后：
 
 1. 打开 `zhangxinchuang-server` 的公网地址，访问 `/health`，看到 `ok: true` 即后端在线。
-2. 打开 `zhangxinchuang-mcp` 的公网地址，访问 `/health`，看到 `has_url: true`、`has_token: true` 即 MCP 配置完成。
+2. 打开 `zhangxinchuang-mcp` 的公网地址，访问 `/health`，看到 `has_url: true`、`has_token: true`、`has_mcp_token: true` 即 MCP 配置完成。
 3. 在 Android 设置页填写：
    - 服务器地址：`zhangxinchuang-server` 的公网地址，不要多余斜杠。
    - Token：Render 自动生成的同一个 `LINJIAN_TOKEN`。
    - 设备 ID：建议与 `LINJIAN_DEFAULT_DEVICE` 一致，例如 `android-phone`。
 4. 在 AI/MCP 客户端里填写 MCP 地址：
-   - Streamable HTTP：`https://你的-mcp-域名/mcp`
-   - SSE：`https://你的-mcp-域名/sse`
+   - Streamable HTTP：`https://你的-mcp-域名/mcp?token=你的-LINJIAN_MCP_TOKEN`
+   - SSE：`https://你的-mcp-域名/sse?token=你的-LINJIAN_MCP_TOKEN`
+
+优先使用 Streamable HTTP。URL 中含有密钥，不要截图、转发或提交到仓库。
 
 如果你是从旧版 0.3.6.3 更新上来，**直接重新部署 MCP 服务即可**。新版 MCP 会兼容旧环境变量：即使 `LINJIAN_URL` 仍然是旧版自动写入的 `http://zhangxinchuang-server-xxxx:10000` 内网地址，也会自动兜底转换为 `https://zhangxinchuang-server-xxxx.onrender.com` 公网地址再连接。
 
@@ -166,6 +171,7 @@ Public Networking：开启 HTTP 域名
 ```env
 LINJIAN_URL=https://${{ server.RAILWAY_PUBLIC_DOMAIN }}
 LINJIAN_TOKEN=${{ shared.LINJIAN_TOKEN }}
+LINJIAN_MCP_TOKEN=${{ shared.LINJIAN_MCP_TOKEN }}
 LINJIAN_DEFAULT_DEVICE=${{ shared.LINJIAN_DEFAULT_DEVICE }}
 ```
 
@@ -175,6 +181,7 @@ LINJIAN_DEFAULT_DEVICE=${{ shared.LINJIAN_DEFAULT_DEVICE }}
 
 ```env
 LINJIAN_TOKEN=${{ secret(48) }}
+LINJIAN_MCP_TOKEN=${{ secret(48) }}
 LINJIAN_DEFAULT_DEVICE=android-phone
 ```
 
@@ -183,7 +190,7 @@ LINJIAN_DEFAULT_DEVICE=android-phone
 1. 访问 `https://你的-server-域名/health`，确认后端在线。
 2. 访问 `https://你的-mcp-域名/health`，确认 MCP 已连上 server。
 3. Android 设置页填写 server 公网地址、同一个 Token 和设备 ID。
-4. AI/MCP 客户端填写 `https://你的-mcp-域名/mcp` 或 `https://你的-mcp-域名/sse`。
+4. AI/MCP 客户端填写 `https://你的-mcp-域名/mcp?token=你的-LINJIAN_MCP_TOKEN` 或 `https://你的-mcp-域名/sse?token=你的-LINJIAN_MCP_TOKEN`。
 
 更完整的 Railway 模板按钮配置见 [docs/railway-one-click.md](docs/railway-one-click.md)。手动双服务部署流程见 [docs/setup.md](docs/setup.md)。
 
@@ -193,16 +200,17 @@ LINJIAN_DEFAULT_DEVICE=android-phone
 
 ### 第一步：准备 Token
 
-先生成一个长随机 Token：
+分别生成两个长随机 Token：一个供手机与后端使用，另一个只保护 MCP 公网入口。
 
 ```bash
 python3 - <<'PY'
 import secrets
 print(secrets.token_urlsafe(32))
+print(secrets.token_urlsafe(32))
 PY
 ```
 
-后面的 server、mcp、Android 设置页都使用同一个 Token。
+把第一行记为 `LINJIAN_TOKEN`，第二行记为 `LINJIAN_MCP_TOKEN`。Android 只填写第一行。
 
 ### 第二步：部署 server 服务
 
@@ -250,6 +258,7 @@ Start Command：npm start
 ```env
 LINJIAN_URL=https://你的-server-域名
 LINJIAN_TOKEN=第一步生成的同一个长随机token
+LINJIAN_MCP_TOKEN=第一步生成的第二个长随机token
 LINJIAN_DEFAULT_DEVICE=android-phone
 ```
 
@@ -261,18 +270,18 @@ LINJIAN_DEFAULT_DEVICE=android-phone
 https://你的-mcp-域名/health
 ```
 
-看到 `ok: true`、`has_url: true`、`has_token: true` 就说明 MCP 可用。
+看到 `ok: true`、`has_url: true`、`has_token: true`、`has_mcp_token: true` 就说明 MCP 可用。
 
 AI/MCP 客户端连接：
 
 ```text
-https://你的-mcp-域名/mcp
+https://你的-mcp-域名/mcp?token=你的-LINJIAN_MCP_TOKEN
 ```
 
 或：
 
 ```text
-https://你的-mcp-域名/sse
+https://你的-mcp-域名/sse?token=你的-LINJIAN_MCP_TOKEN
 ```
 
 ### 第四步：连接 Android
@@ -329,14 +338,14 @@ http://192.168.1.23:8513
 ```bash
 cd mcp
 npm install
-LINJIAN_URL=http://192.168.1.23:8513 LINJIAN_TOKEN=你的长随机token npm start
+LINJIAN_URL=http://192.168.1.23:8513 LINJIAN_TOKEN=你的长随机token LINJIAN_MCP_TOKEN=另一枚长随机token npm start
 ```
 
 默认 MCP 监听：
 
 ```text
-http://127.0.0.1:8787/mcp
-http://127.0.0.1:8787/sse
+http://127.0.0.1:8787/mcp?token=你的-LINJIAN_MCP_TOKEN
+http://127.0.0.1:8787/sse?token=你的-LINJIAN_MCP_TOKEN
 ```
 
 如果 AI/MCP 客户端和 MCP 服务不在同一台电脑，需要把 `127.0.0.1` 换成 MCP 所在电脑的局域网 IP，并确认防火墙放行端口 `8787`。
@@ -361,6 +370,7 @@ MCP 详细工具说明见 [docs/mcp.md](docs/mcp.md)。常用工具分组如下�
 ## 安全边界
 
 - 不要公开 `LINJIAN_TOKEN`。
+- 不要公开 `LINJIAN_MCP_TOKEN` 或包含它的 MCP 连接 URL。
 - 不要把 MCP 服务连接到不可信客户端。
 - 不要用掌心窗管理别人的设备。
 - 自动发送评论、点击按钮、读屏、截图、门禁、息屏等动作建议默认手动确认。

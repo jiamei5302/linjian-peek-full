@@ -22,13 +22,13 @@
 - `zhangxinchuang-server`
 - `zhangxinchuang-mcp`
 
-两个服务共用同一个自动生成的 `LINJIAN_TOKEN`。部署完成后：
+Blueprint 会自动生成 `LINJIAN_TOKEN`（手机与后端）和独立的 `LINJIAN_MCP_TOKEN`（公网 MCP 门禁）。部署完成后：
 
 1. server 访问 `/health`，确认后端在线。
-2. mcp 访问 `/health`，确认 `has_url` 和 `has_token` 为 true。
+2. mcp 访问 `/health`，确认 `has_url`、`has_token` 和 `has_mcp_token` 为 true。
 3. Android 设置页填写 server 公网地址、同一个 Token、设备 ID。
 4. MCP 的 `LINJIAN_URL` 会自动引用 server 的公网 `RENDER_EXTERNAL_URL`，Render 一键部署不需要手动填写；旧部署只重新部署 MCP 时，新版 MCP 也会把旧的 Render 内网 `hostport` 自动兜底为公网地址。
-4. MCP 客户端填写 mcp 的 `/mcp` 或 `/sse` 地址。
+4. MCP 客户端填写 `https://你的-mcp-域名/mcp?token=你的-LINJIAN_MCP_TOKEN`，优先使用 Streamable HTTP。
 
 ## 3. Railway 一键部署按钮
 
@@ -50,8 +50,11 @@ Railway 的一键部署按钮需要先创建 Railway Template。创建步骤见 
 python3 - <<'PY'
 import secrets
 print(secrets.token_urlsafe(32))
+print(secrets.token_urlsafe(32))
 PY
 ```
+
+第一行用于 `LINJIAN_TOKEN`，第二行用于 `LINJIAN_MCP_TOKEN`。两枚 Token 不要混用或公开。
 
 ### 4.2 部署 server
 
@@ -93,14 +96,15 @@ Healthcheck Path: /health
 ```env
 LINJIAN_URL=https://你的-server-域名
 LINJIAN_TOKEN=同一个长随机token
+LINJIAN_MCP_TOKEN=第二个长随机token
 LINJIAN_DEFAULT_DEVICE=android-phone
 ```
 
 MCP 地址：
 
 ```text
-https://你的-mcp-域名/mcp
-https://你的-mcp-域名/sse
+https://你的-mcp-域名/mcp?token=你的-LINJIAN_MCP_TOKEN
+https://你的-mcp-域名/sse?token=你的-LINJIAN_MCP_TOKEN
 ```
 
 ## 5. 局域网部署
@@ -134,14 +138,14 @@ http://192.168.1.23:8513
 ```bash
 cd mcp
 npm install
-LINJIAN_URL=http://192.168.1.23:8513 LINJIAN_TOKEN=你的长随机token npm start
+LINJIAN_URL=http://192.168.1.23:8513 LINJIAN_TOKEN=你的长随机token LINJIAN_MCP_TOKEN=另一枚长随机token npm start
 ```
 
 本机 MCP 地址：
 
 ```text
-http://127.0.0.1:8787/mcp
-http://127.0.0.1:8787/sse
+http://127.0.0.1:8787/mcp?token=你的-LINJIAN_MCP_TOKEN
+http://127.0.0.1:8787/sse?token=你的-LINJIAN_MCP_TOKEN
 ```
 
 ## 6. 构建 APK
@@ -172,6 +176,8 @@ android/Zhangxinchuang-public-v0.3.6.6.apk
 - server `/health` 不通：检查部署日志、端口、环境变量和服务是否休眠。
 - MCP `/health` 显示 `has_url: false`：检查是否缺少 `LINJIAN_URL`。Render 旧版部署通常不需要手动改，重新部署新版 MCP 后会自动把旧内网 `hostport` 兜底为公网地址。
 - MCP `/health` 显示 `has_token: false`：没有设置 `LINJIAN_TOKEN`。
+- MCP `/health` 显示 `has_mcp_token: false`：没有设置 `LINJIAN_MCP_TOKEN`，公网工具入口会拒绝访问。
+- MCP 返回 401：连接 URL 缺少正确的 `?token=LINJIAN_MCP_TOKEN`；不要把 Token 发进聊天或截图。
 - 手机连不上：检查服务器地址不要多余斜杠，Token 完全一致，公网地址使用 HTTPS。
 - 局域网连不上：检查手机和电脑是否同一 Wi-Fi，电脑防火墙是否放行端口。
 - 截图失败：检查无障碍服务是否开启，手机端是否点了启动。
